@@ -1,8 +1,8 @@
 import { Router } from "express";
-import userMiddleware from "../middleware/user.js"
+// import userMiddleware from "../middleware/user.js"
 import jwt from "jsonwebtoken";
-import { Users } from "../db/db.js";
-import signupSchema from "../Types.js"
+import { Users } from "../database/db.js";
+import {signupSchema} from "../Types.js"
 import dotenv from "dotenv"
 
 
