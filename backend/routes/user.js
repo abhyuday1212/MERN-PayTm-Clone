@@ -38,12 +38,14 @@ router.post('/signup', async (req, res) => {
             lastName: req.body.lastName
         });
 
-        const userId = dbUser._id;
+        const token = jwt.sign({
+            userId: dbUser._id,
+            username: dbUser.username
+        }, jwtSecret);
 
-        const token = jwt.sign({ userId }, jwtSecret);
 
         await Account.create({
-            userId,
+            userId: dbUser._id,
             balance: 1 + Math.random() * 1000
         });
 
@@ -59,11 +61,9 @@ router.post('/signup', async (req, res) => {
 router.post('/signin', async (req, res) => {
     // Implement admin signup logic
     const { username, password } = req.body;
-    const jwtSecretKey = process.env.JWT_SECRET_KEY;
-    // check if this user exists in the database
 
     try {
-        const checkUserExistance = await Users.findOne({ username })
+        const checkUserExistance = await Users.findOne({ username: req.body.username })
 
         if (!checkUserExistance) {
             console.log("You are not authorized, input a correct username and password");
@@ -80,7 +80,10 @@ router.post('/signin', async (req, res) => {
         }
 
         if (checkUserExistance) {
-            const token = jwt.sign({ userId: checkUserExistance._id }, jwtSecretKey);
+            const token = jwt.sign({
+                userId: checkUserExistance._id,
+                username: username
+            }, jwtSecret);
 
             return res.json({ token })
         }
@@ -95,7 +98,7 @@ router.post('/signin', async (req, res) => {
 
 // ------------------ updating the user input
 
-router.put("/update", async (req, res) => {
+router.put("/update", userAuthMiddleware, async (req, res) => {
     const { success } = updateUser.safeParse(req.body)
 
     if (!success) {
@@ -120,7 +123,7 @@ router.put("/update", async (req, res) => {
 // ----------
 // Route to get users from the backend, filterable via firstName/lastName
 
-router.get("/bulk", async (req, res) => {
+router.get("/bulk", userAuthMiddleware, async (req, res) => {
     const filter = req.query.filter || "";
 
     const users = await Users.find({
@@ -135,7 +138,7 @@ router.get("/bulk", async (req, res) => {
         }]
     })
 
-    res.json({
+    return res.json({
         user: users.map(user => ({
             username: user.username,
             firstName: user.firstName,
@@ -145,5 +148,21 @@ router.get("/bulk", async (req, res) => {
     })
 })
 
+router.get("/allusers", userAuthMiddleware, async (req, res) => {
+    try {
+        const allUsers = await Users.find({}, 'username');
+
+        const allUsernamesWithIndices = allUsers.map((user, index) => ({
+            index: index + 1,
+            username: user.username
+        }));
+
+        return res.json(allUsernamesWithIndices);
+        
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return res.status(500).json({ msg: 'Internal server error' });
+    }
+})
 
 export default router

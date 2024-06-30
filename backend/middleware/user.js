@@ -3,6 +3,7 @@ import dotenv from "dotenv"
 
 dotenv.config();
 
+const jwtSecretKey = process.env.JWT_SECRET_KEY;
 
 async function userAuthMiddleware(req, res, next) {
 
@@ -13,7 +14,7 @@ async function userAuthMiddleware(req, res, next) {
 
     // Bearer xyz......
 
-    const jwtSecretKey = process.env.JWT_SECRET_KEY;
+
 
     const decodedValue = jwt.verify(jwtToken, jwtSecretKey)
 
@@ -25,7 +26,7 @@ async function userAuthMiddleware(req, res, next) {
     */
     if (decodedValue.username) {
         //* This passes the username value in req object in subsequent requests
-
+        req.userId = decodedValue.userId;
         req.username = decodedValue.username;
         req.randomData = "Mera Data Passed by middleware";
         next()
