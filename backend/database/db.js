@@ -46,6 +46,22 @@ const userSchema = mongoose.Schema({
     }
 })
 
-const Users = mongoose.model('Users', userSchema)
 
-export { Users }
+const accountSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId, // Reference to User model
+        //! This is done to establish a similar relation of primary key and foreign key, basically agr kisi jgh "ref" use krte h to "ref" wla table primary table hoga means ref wale table me correspondin user exist krna chaiye uska corresponding balance exist krne k liye
+
+        ref: 'Users',
+        required: true
+    },
+    balance: {
+        type: Number,
+        required: true
+    }
+});
+
+const Users = mongoose.model('Users', userSchema)
+const Account = mongoose.model('Account', accountSchema);
+
+export { Users, Account }

@@ -4,7 +4,7 @@ import dotenv from "dotenv"
 dotenv.config();
 
 
-async function userMiddleware(req, res, next) {
+async function userAuthMiddleware(req, res, next) {
 
     const token = req.headers.authorization;
     const tokenWords = token.split(" ");
@@ -39,4 +39,4 @@ async function userMiddleware(req, res, next) {
 
 
 
-export default userMiddleware;
+export default userAuthMiddleware;
