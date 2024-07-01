@@ -15,6 +15,26 @@ dotenv.config();
 const jwtSecret = process.env.JWT_SECRET_KEY
 
 
+router.get("/me", (req, res) => {
+    const token = req.headers['authorization'] && req.headers['authorization'].split(" ")[1];
+
+    if (!token) {
+        return res.json({ isSuccess: false });
+    }
+
+    jwt.verify(token, jwtSecret, (err) => {
+        if (err) {
+            return res.json({ isSuccess: false });
+
+        }
+        else {
+            return res.json({ isSuccess: true });
+        }
+    });
+
+
+})
+
 router.post('/signup', async (req, res) => {
     try {
         const { success, error } = signupSchema.safeParse(req.body);
@@ -122,31 +142,57 @@ router.put("/update", userAuthMiddleware, async (req, res) => {
 })
 // ----------
 // Route to get users from the backend, filterable via firstName/lastName
-
+const PAGE_SIZE = 7;
 router.get("/bulk", userAuthMiddleware, async (req, res) => {
     const filter = req.query.filter || "";
+    const excludeUserId = req.userId;
 
-    const users = await Users.find({
-        $or: [{
-            firstName: {
-                "$regex": filter
-            }
-        }, {
-            lastName: {
-                "$regex": filter
-            }
-        }]
-    })
+    const page = parseInt(req.query.page) || 1;
 
-    return res.json({
-        user: users.map(user => ({
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            _id: user._id
-        }))
-    })
-})
+    try {
+        let users = await Users.find({
+            $and: [
+                {
+                    $or: [
+                        { username: { $regex: filter } },
+                        { firstName: { $regex: filter } },
+                        { lastName: { $regex: filter } },
+                    ],
+                },
+                { _id: { $ne: excludeUserId } },
+            ],
+        })
+            .skip((page - 1) * PAGE_SIZE)
+            .limit(PAGE_SIZE);
+
+        const totalUsers = await Users.countDocuments({
+            $and: [
+                {
+                    $or: [
+                        { username: { $regex: filter } },
+                        { firstName: { $regex: filter } },
+                        { lastName: { $regex: filter } },
+                    ],
+                },
+                { _id: { $ne: excludeUserId } },
+            ],
+        });
+
+
+        return res.json({
+            users: users.map((user) => ({
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                _id: user._id,
+            })),
+            totalPages: Math.ceil(totalUsers / PAGE_SIZE),
+        });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        return res.status(500).json({ msg: "Internal server error" });
+    }
+});
 
 router.get("/allusers", userAuthMiddleware, async (req, res) => {
     try {
@@ -158,11 +204,11 @@ router.get("/allusers", userAuthMiddleware, async (req, res) => {
         }));
 
         return res.json(allUsernamesWithIndices);
-        
+
     } catch (error) {
         console.error('Error fetching users:', error);
         return res.status(500).json({ msg: 'Internal server error' });
     }
 })
 
-export default router
+export default router;
